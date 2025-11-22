@@ -25,3 +25,4 @@ TestResults.xml
 *.classpath
 .idea
 *__init__.py
+*__init__.cpython-312.pyc
