@@ -24,3 +24,4 @@ TestResults.xml
 *.project
 *.classpath
 .idea
+*__init__.py
