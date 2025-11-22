@@ -1,4 +1,2 @@
-oracledb
-pandas
-numpy
+json
 pymongo
