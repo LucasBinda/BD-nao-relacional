@@ -1,2 +1,5 @@
+oracledb
+pandas
+numpy
 path
 pymongo

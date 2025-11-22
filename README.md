@@ -95,7 +95,7 @@ O sistema irá carregar o menu de opções.
 O projeto segue a arquitetura Model-View-Controller (MVC) ou similar para organização de responsabilidades:
 
 ```
-trabalho_c2/
+BD-nao-relacional/
 ├── sql/                        # Contém scripts SQL para relatórios e setup.
 ├── src/
 │   ├── conexion/               # Lógica de conexão com o Oracle (OracleQueries).
