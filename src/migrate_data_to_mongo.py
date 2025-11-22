@@ -4,11 +4,9 @@ import pandas as pd
 from conexion.mongodb_queries import MongoDBConnection 
 from conexion.oracle_queries import OracleQueries
 
-# --- LISTA DAS TABELAS DO PROJETO HOTELARIA ---
-# Estas coleções serão criadas no MongoDB, conforme solicitado.
+
 LIST_OF_COLLECTIONS = ["hospede", "tipo_quarto", "quarto", "reserva", "pagamento"] 
 
-# Configuração de Log
 logger = logging.getLogger(name="MongoDataMigrator")
 logger.setLevel(level=logging.WARNING)
 
@@ -51,28 +49,20 @@ def migrate_data():
     oracle = OracleQueries()
     oracle.connect()
     
-    # Instancia MongoDBConnection (Requisito III)
     mongo_conn = MongoDBConnection() 
     
-    sql = "select * from {table}" # Query de extração
+    sql = "select * from {table}" 
     
-    # --- Passo 1: Criar/Limpar as Coleções ---
     create_collections(mongo_conn=mongo_conn, drop_if_exists=True)
     
-    # --- Passo 2: Extrair e Inserir ---
     for collection in LIST_OF_COLLECTIONS:
         try:
-            # 1. Extração do Oracle
             df = oracle.sqlToDataFrame(sql.format(table=collection))
             
-            # 2. Conversão de tipos (Pandas para JSON)
-            # orient='records' gera o formato [{}, {}, ...] ideal para o MongoDB
-            # date_format='iso' garante que datas sejam serializadas corretamente
             records = json.loads(df.to_json(orient='records', date_format='iso'))
             
             logger.warning(f"Dados extraídos da tabela Oracle {collection}")
             
-            # 3. Inserção no MongoDB (Requisito V)
             insert_many(mongo_conn=mongo_conn, data=records, collection=collection)
             logger.warning(f"Documentos gerados na coleção {collection}")
             
@@ -83,8 +73,7 @@ def migrate_data():
 
 
 if __name__ == "__main__":
-    # NOTA: O arquivo src/conexion/mongodb_queries.py precisa de um arquivo de configuração config/config.json 
-    # com as credenciais do seu MongoDB antes de rodar este script.
+    
     logging.warning("Starting MongoDB Migration")
     migrate_data() 
     logging.warning("End of MongoDB Migration")
