@@ -4,14 +4,15 @@ from pymongo import ASCENDING, DESCENDING
 
 class Relatorio:
     def __init__(self):
-        pass
+        # Inicializa a instância de conexão no construtor
+        self.mongo = MongoQueries()
 
     def get_relatorio_hospede(self):
+        # Abre a conexão
+        self.mongo.connect()
 
-        mongo = MongoQueries()
-        mongo.connect()
-
-        query_result = mongo.db["hospede"].find({}, 
+        # Realiza a consulta na coleção 'hospede'
+        query_result = self.mongo.db["hospede"].find({}, 
                                                  {"id_hospede": 1, 
                                                   "nome": 1, 
                                                   "sobrenome": 1,
@@ -20,17 +21,20 @@ class Relatorio:
                                                   "_id": 0
                                                  }).sort("nome", ASCENDING)
         
+        # Converte para DataFrame
         df_hospede = pd.DataFrame(list(query_result))
-        mongo.close()
+        
+        # Fecha a conexão
+        self.mongo.close()
+        
+        # Exibe o resultado
         print(df_hospede)
         input("Pressione Enter para Sair do Relatório de Hóspede")
 
     def get_relatorio_tipo_quarto(self):
-        # Relatório Simples
-        mongo = MongoQueries()
-        mongo.connect()
+        self.mongo.connect()
 
-        query_result = mongo.db["tipo_quarto"].find({}, 
+        query_result = self.mongo.db["tipo_quarto"].find({}, 
                                                       {"nome": 1, 
                                                        "descricao": 1, 
                                                        "preco_diaria": 1, 
@@ -39,18 +43,15 @@ class Relatorio:
                                                       }).sort("nome", ASCENDING)
         
         df_tipo = pd.DataFrame(list(query_result))
-        mongo.close()
+        self.mongo.close()
         print(df_tipo)
         input("Pressione Enter para Sair do Relatório de Tipo de Quarto")
 
     def get_relatorio_quarto(self):
-
-        mongo = MongoQueries()
-        mongo.connect()
+        self.mongo.connect()
         
-        query_result = mongo.db["quarto"].aggregate([
+        query_result = self.mongo.db["quarto"].aggregate([
             {
-
                 "$lookup": {
                     "from": "tipo_quarto",
                     "localField": "id_tipo_quarto",
@@ -77,16 +78,14 @@ class Relatorio:
         ])
         
         df_quarto = pd.DataFrame(list(query_result))
-        mongo.close()
+        self.mongo.close()
         print(df_quarto)
         input("Pressione Enter para Sair do Relatório de Quarto")
 
     def get_relatorio_reserva(self):
-        # Relatório Complexo (Reserva + Hóspede + Quarto)
-        mongo = MongoQueries()
-        mongo.connect()
+        self.mongo.connect()
         
-        query_result = mongo.db["reserva"].aggregate([
+        query_result = self.mongo.db["reserva"].aggregate([
             {
                 "$lookup": {
                     "from": "hospede",
@@ -121,15 +120,14 @@ class Relatorio:
         ])
         
         df_reserva = pd.DataFrame(list(query_result))
-        mongo.close()
+        self.mongo.close()
         print(df_reserva)
         input("Pressione Enter para Sair do Relatório de Reserva")
 
     def get_relatorio_pagamento(self):
-        mongo = MongoQueries()
-        mongo.connect()
+        self.mongo.connect()
         
-        query_result = mongo.db["pagamento"].aggregate([
+        query_result = self.mongo.db["pagamento"].aggregate([
             {
                 "$lookup": {
                     "from": "reserva",
@@ -161,15 +159,14 @@ class Relatorio:
         ])
         
         df_pagamento = pd.DataFrame(list(query_result))
-        mongo.close()
+        self.mongo.close()
         print(df_pagamento)
         input("Pressione Enter para Sair do Relatório de Pagamento")
 
     def get_total_reserva_por_hospede(self):
-        mongo = MongoQueries()
-        mongo.connect()
+        self.mongo.connect()
         
-        query_result = mongo.db["reserva"].aggregate([
+        query_result = self.mongo.db["reserva"].aggregate([
             {
                 "$group": {
                     "_id": "$id_hospede", 
@@ -178,7 +175,6 @@ class Relatorio:
                 }
             },
             {
-          
                 "$lookup": {
                     "from": "hospede",
                     "localField": "_id",
@@ -199,6 +195,6 @@ class Relatorio:
         ])
         
         df_total = pd.DataFrame(list(query_result))
-        mongo.close()
+        self.mongo.close()
         print(df_total)
         input("Pressione Enter para Sair do Relatório de Total Gasto por Hóspede")
