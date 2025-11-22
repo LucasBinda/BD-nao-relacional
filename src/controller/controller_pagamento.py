@@ -1,64 +1,62 @@
+from bson import ObjectId
+import pandas as pd
 from model.Pagamento import Pagamento
-from model.Reserva import Reserva
-from conexion.oracle_queries import OracleQueries
+from conexion.mongo_queries import MongoQueries
 from datetime import date
-import decimal
 
 class Controller_Pagamento:
     def __init__(self):
-        pass
+        self.mongo = MongoQueries()
 
     def inserir_pagamento(self) -> Pagamento:
-        """
-        Insere um novo pagamento no banco de dados.
-        Ref.: https://cx-oracle.readthedocs.io/en/latest/user_guide/plsql_execution.html#anonymous-pl-sql-blocks
-        """
-
         # Cria uma nova conexão com o banco
-        oracle = OracleQueries()
-        # Recupera o cursor para executar um bloco PL/SQL anônimo
-        cursor = oracle.connect()
-        # Cria a variável de saída para o ID do pagamento
-        output_value = cursor.var(int)
+        self.mongo.connect()
 
-        # Solicita os dados do pagamento ao usuário
+        #Solicita ao usuario os novos dados do pagamento
         id_reserva = int(input("ID da Reserva: "))
-        valor_pago = decimal.Decimal(input("Valor Pago: "))
+        valor_pago = float(input("Valor Pago: "))
         data_pagamento = input("Data do Pagamento (AAAA-MM-DD): ")
         data_pagamento = date.fromisoformat(data_pagamento)
         metodo = input("Método de Pagamento: ")
         status = input("Status do Pagamento: ")
 
-        # Cria o dicionário de dados para o PL/SQL
-        data = dict(
-            id_pagamento=output_value,
-            id_reserva=id_reserva,
-            valor_pago=valor_pago,
-            data_pagamento=data_pagamento,
-            metodo=metodo,
-            status=status
-        )
+        # Recupera o próximo id_pagamento
+        proximo_pagamento = self.mongo.db["pagamentos"].aggregate([
+            {
+                '$group': {
+                    '_id': '$pagamentos',
+                    'proximo_pagamento': {
+                        '$max': '$id_pagamento'
+                    }
+                }
+            }, {
+                '$project': {
+                    'proximo_pagamento': {
+                        '$sum': [
+                            '$proximo_pagamento', 1
+                        ]
+                    },
+                    '_id': 0
+                }
+            }
+        ])
 
-        # Executa o bloco PL/SQL para inserir o pagamento
-        cursor.execute("""
-        begin
-            :id_pagamento := PAGAMENTOS_ID_PAGAMENTO_SEQ.NEXTVAL;
-            insert into pagamentos (id_pagamento, id_reserva, valor_pago, data_pagamento, metodo, status)
-            values(:id_pagamento, :id_reserva, :valor_pago, :data_pagamento, :metodo, :status);
-        end;
-        """, data)
+        proximo_pagamento = int(list(proximo_pagamento)[0]['proximo_pagamento'])
 
-        # Recupera o ID do pagamento inserido
-        id_pagamento = output_value.getvalue()
-        # Confirma a inserção no banco
-        oracle.conn.commit()
+        # Insere e Recupera o id do novo pagamento
+        id_pagamento = self.mongo.db["pagamentos"].insert_one({
+            "id_pagamento": proximo_pagamento,
+            "id_reserva": id_reserva,
+            "valor_pago": valor_pago,
+            "data_pagamento": str(data_pagamento),
+            "metodo": metodo,
+            "status": status
+        })
 
-        # Recupera os dados do pagamento inserido
-        df_pagamento = oracle.sqlToDataFrame(
-            f"select * from pagamentos where id_pagamento = {id_pagamento}"
-        )
+        # Recupera os dados do novo pagamento criado transformando em um DataFrame
+        df_pagamento = self.recupera_pagamento(id_pagamento.inserted_id)
 
-        # Cria o objeto Pagamento
+        # Cria um novo objeto Pagamento
         novo_pagamento = Pagamento(
             df_pagamento.id_pagamento.values[0],
             df_pagamento.id_reserva.values[0],
@@ -68,44 +66,42 @@ class Controller_Pagamento:
             df_pagamento.status.values[0]
         )
 
-        # Exibe os atributos do pagamento criado
+        # Exibe os atributos do novo pagamento
         print(novo_pagamento.to_string())
+        self.mongo.close()
         return novo_pagamento
 
     def atualizar_pagamento(self) -> Pagamento:
-        """
-        Atualiza um pagamento existente.
-        """
+        # Cria uma nova conexão com o banco que permite alteração
+        self.mongo.connect()
 
-        oracle = OracleQueries(can_write=True)
-        oracle.connect()
-
-        # Solicita o ID do pagamento que será alterado
+        # Solicita ao usuário o ID do pagamento a ser alterado
         id_pagamento = int(input("ID do Pagamento que irá alterar: "))
 
-        # Verifica se o pagamento existe
-        if not self.verifica_existencia_pagamento(oracle, id_pagamento):
-
-            # Solicita novos dados
-            valor_pago = decimal.Decimal(input("Novo Valor Pago: "))
+        # Verifica se o pagamento existe na base de dados
+        if not self.verifica_existencia_pagamento(id_pagamento):
+            # Solicita os novos dados
+            valor_pago = float(input("Novo Valor Pago: "))
             data_pagamento = input("Nova Data do Pagamento (AAAA-MM-DD): ")
             data_pagamento = date.fromisoformat(data_pagamento)
             metodo = input("Novo Método de Pagamento: ")
             status = input("Novo Status do Pagamento: ")
 
-            # Atualiza o pagamento no banco
-            oracle.write(f"""
-                update pagamentos
-                set valor_pago = {valor_pago}, data_pagamento = '{data_pagamento}', metodo = '{metodo}', status = '{status}'
-                where id_pagamento = {id_pagamento}
-            """)
-
-            # Recupera os dados atualizados
-            df_pagamento = oracle.sqlToDataFrame(
-                f"select * from pagamentos where id_pagamento = {id_pagamento}"
+            # Atualiza o pagamento existente
+            self.mongo.db["pagamentos"].update_one(
+                {"id_pagamento": id_pagamento},
+                {"$set": {
+                    "valor_pago": valor_pago,
+                    "data_pagamento": str(data_pagamento),
+                    "metodo": metodo,
+                    "status": status
+                }}
             )
 
-            # Cria objeto Pagamento atualizado
+            # Recupera os dados do pagamento atualizado
+            df_pagamento = self.recupera_pagamento_codigo(id_pagamento)
+
+            # Cria um novo objeto Pagamento
             pagamento_atualizado = Pagamento(
                 df_pagamento.id_pagamento.values[0],
                 df_pagamento.id_reserva.values[0],
@@ -115,34 +111,31 @@ class Controller_Pagamento:
                 df_pagamento.status.values[0]
             )
 
+            # Exibe os atributos do novo pagamento
             print(pagamento_atualizado.to_string())
+            self.mongo.close()
             return pagamento_atualizado
-
         else:
+            self.mongo.close()
             print(f"O pagamento ID {id_pagamento} não existe.")
             return None
 
     def excluir_pagamento(self):
-        """
-        Exclui um pagamento do banco de dados.
-        """
+        # Cria uma nova conexão com o banco que permite alteração
+        self.mongo.connect()
 
-        oracle = OracleQueries(can_write=True)
-        oracle.connect()
-
+        # Solicita ao usuário o ID do pagamento que irá excluir
         id_pagamento = int(input("ID do Pagamento que irá excluir: "))
 
-        if not self.verifica_existencia_pagamento(oracle, id_pagamento):
+        # Verifica se o pagamento existe na base de dados
+        if not self.verifica_existencia_pagamento(id_pagamento):
+            # Recupera os dados do pagamento a ser excluído
+            df_pagamento = self.recupera_pagamento_codigo(id_pagamento)
 
-            # Recupera os dados antes de excluir
-            df_pagamento = oracle.sqlToDataFrame(
-                f"select * from pagamentos where id_pagamento = {id_pagamento}"
-            )
+            # Revome o pagamento da tabela
+            self.mongo.db["pagamentos"].delete_one({"id_pagamento": id_pagamento})
 
-            # Remove o pagamento
-            oracle.write(f"delete from pagamentos where id_pagamento = {id_pagamento}")
-
-            # Cria objeto para informar que foi removido
+            # Cria um novo objeto Pagamento para informar que foi removido
             pagamento_excluido = Pagamento(
                 df_pagamento.id_pagamento.values[0],
                 df_pagamento.id_reserva.values[0],
@@ -154,16 +147,55 @@ class Controller_Pagamento:
 
             print("Pagamento Removido com Sucesso!")
             print(pagamento_excluido.to_string())
-
+            self.mongo.close()
         else:
+            self.mongo.close()
             print(f"O pagamento ID {id_pagamento} não existe.")
 
-    def verifica_existencia_pagamento(self, oracle: OracleQueries, id_pagamento: int = None) -> bool:
-        """
-        Verifica se o pagamento existe no banco.
-        Retorna True se não existe, False se existe.
-        """
-        df_pagamento = oracle.sqlToDataFrame(
-            f"select id_pagamento from pagamentos where id_pagamento = {id_pagamento}"
+    def verifica_existencia_pagamento(self, id_pagamento:int=None, external: bool = False) -> bool:
+        if external:
+            # Cria uma nova conexão com o banco que permite alteração
+            self.mongo.connect()
+
+        # Recupera os dados do pagamento transformando em um DataFrame
+        df_pagamento = pd.DataFrame(
+            self.mongo.db["pagamentos"].find(
+                {"id_pagamento": id_pagamento},
+                {"id_pagamento": 1, "_id": 0}
+            )
         )
+
+        if external:
+            # Fecha a conexão com o Mongo
+            self.mongo.close()
+
         return df_pagamento.empty
+
+    def recupera_pagamento(self, _id:ObjectId=None) -> pd.DataFrame:
+        # Recupera os dados do pagamento transformando em um DataFrame
+        df_pagamento = pd.DataFrame(list(
+            self.mongo.db["pagamentos"].find(
+                {"_id": _id},
+                {"id_pagamento":1,"id_reserva":1,"valor_pago":1,"data_pagamento":1,"metodo":1,"status":1,"_id":0}
+            )
+        ))
+        return df_pagamento
+
+    def recupera_pagamento_codigo(self, id_pagamento:int=None, external: bool = False) -> pd.DataFrame:
+        if external:
+            # Cria uma nova conexão com o banco que permite alteração
+            self.mongo.connect()
+
+        # Recupera os dados do pagamento transformando em um DataFrame
+        df_pagamento = pd.DataFrame(list(
+            self.mongo.db["pagamentos"].find(
+                {"id_pagamento": id_pagamento},
+                {"id_pagamento":1,"id_reserva":1,"valor_pago":1,"data_pagamento":1,"metodo":1,"status":1,"_id":0}
+            )
+        ))
+
+        if external:
+            # Fecha a conexão com o Mongo
+            self.mongo.close()
+
+        return df_pagamento
