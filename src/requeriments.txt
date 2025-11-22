@@ -1,2 +1,4 @@
-path
+cx-Oracle
+pandas
+numpy
 pymongo
