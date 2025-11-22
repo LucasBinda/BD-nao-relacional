@@ -1,4 +1,4 @@
-class Hospede:
+class hospede:
     def __init__(self, 
                  id_hospede:int=None,
                  documento:str=None, 
