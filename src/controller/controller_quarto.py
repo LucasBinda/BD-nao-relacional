@@ -1,6 +1,6 @@
 from bson import ObjectId
 import pandas as pd
-from model.quarto import Quarto
+from model.quarto import quarto
 from conexion.mongo_queries import MongoQueries
 
 class Controller_Quarto:

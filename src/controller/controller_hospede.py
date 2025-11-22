@@ -1,5 +1,5 @@
 import pandas as pd
-from model.Hospede import Hospede
+from model.hospede import hospede
 from conexion.mongo_queries import MongoQueries
 
 class Controller_Hospede:

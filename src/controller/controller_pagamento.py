@@ -1,6 +1,6 @@
 from bson import ObjectId
 import pandas as pd
-from model.Pagamento import Pagamento
+from model.pagamento import pagamento
 from conexion.mongo_queries import MongoQueries
 from datetime import date
 

@@ -1,5 +1,5 @@
 import pandas as pd
-from model.Reserva import Reserva
+from model.reserva import reserva
 from conexion.mongo_queries import MongoQueries
 from datetime import datetime
 
