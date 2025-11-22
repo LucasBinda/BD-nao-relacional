@@ -1,11 +1,11 @@
 from datetime import date
 import decimal
-from .Reserva import Reserva
+from .reserva import reserva
 
-class Pagamento:
+class pagamento:
     def __init__(self,
                  id_pagamento:int=None,
-                 id_reseva:Reserva=None,
+                 id_reseva:reserva=None,
                  valor_pago:decimal=None,
                  data_pagamento:date=None,
                  metodo:str=None,
@@ -22,7 +22,7 @@ class Pagamento:
     def set_id_pagamento(self, id_pagamento:int):
         self.id_pagamento = id_pagamento
         
-    def set_id_reserva(self, id_reserva:Reserva):
+    def set_id_reserva(self, id_reserva:reserva):
         self.id_reserva = id_reserva
         
     def set_valor_pago(self, valor_pago:decimal):
@@ -41,7 +41,7 @@ class Pagamento:
     def get_id_pagamento(self) -> int:
         return self.id_pagamento
     
-    def get_id_reserva(self) -> Reserva:
+    def get_id_reserva(self) -> reserva:
         return self.id_reserva
     
     def get_valor_pago(self) -> decimal:
@@ -57,4 +57,4 @@ class Pagamento:
         return self.status
     
     def to_string(self) ->str:
-        return f"ID Pagamento: {self.get_id_pagamento()} | ID Reserva: {self.get_id_reserva()} | Valor Pago: {self.get_valor_pago()} | Data do Pagamento: {self.get_data_pagamento()} | Método de Pagamento: {self.get_metodo()} | Status do Pagamento: {self.get_status()}"
+        return f"ID Pagamento: {self.get_id_pagamento()} | ID reserva: {self.get_id_reserva()} | Valor Pago: {self.get_valor_pago()} | Data do Pagamento: {self.get_data_pagamento()} | Método de Pagamento: {self.get_metodo()} | Status do Pagamento: {self.get_status()}"

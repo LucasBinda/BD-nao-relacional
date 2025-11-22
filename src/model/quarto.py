@@ -1,6 +1,6 @@
 from .tipo_quarto import tipo_quarto
 
-class Quarto:
+class quarto:
     def __init__(self, 
                  id_quarto:int=None,
                  numero_quarto:int=None, 

@@ -1,13 +1,13 @@
 from datetime import date
 import decimal
-from .Hospede import Hospede
-from .Quarto import Quarto
+from .hospede import hospede
+from .quarto import quarto
 
 class Reserva:
     def __init__(self,
                  id_reserva:int=None,
-                 id_hospede:Hospede=None,
-                 id_quarto:Quarto=None,
+                 id_hospede:hospede=None,
+                 id_quarto:quarto=None,
                  data_checkIn:date=None,
                  data_checkOut:date=None,
                  data_reserva:date=None,
