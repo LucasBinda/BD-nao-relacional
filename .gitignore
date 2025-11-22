@@ -21,3 +21,6 @@ rad.json
 #Test results file
 TestResults.xml
 *.pdf
+*.project
+*.classpath
+.idea
