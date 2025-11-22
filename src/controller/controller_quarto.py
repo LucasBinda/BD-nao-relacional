@@ -165,3 +165,4 @@ class Controller_Quarto:
         df_quarto = oracle.sqlToDataFrame(f"select id_quarto from quarto where id_quarto = {id_quarto}")
         # Retorna True se o DataFrame estiver vazio (não existe)
         return df_quarto.empty
+
