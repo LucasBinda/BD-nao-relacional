@@ -1,7 +1,4 @@
 from utils import config
-from src.utils.splash_screen import show_splash
-def main():
-    show_splash(wait_seconds=2.5)
 from utils.splash_screen import SplashScreen
 from reports.relatorios import Relatorio
 from controller.controller_hospede import Controller_Hospede
@@ -9,9 +6,6 @@ from controller.controller_pagamento import Controller_Pagamento
 from controller.controller_quarto import Controller_Quarto
 from controller.controller_reserva import Controller_Reserva
 from controller.controller_tipo_quarto import Controller_TipoQuarto
-from pymongo import MongoClient
-from utils.splash_screen import SplashScreen
-from utils.config import mostrar_menu_principal, mostrar_menu_entidades
 
 
 tela_inicial = SplashScreen()
