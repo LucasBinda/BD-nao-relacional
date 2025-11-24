@@ -1,18 +1,16 @@
-from conexion.mongo_queries import MongoQueries
+from conexion.mongodb_queries import MongoDBConnection 
 import pandas as pd
 from pymongo import ASCENDING, DESCENDING
 
 class Relatorio:
     def __init__(self):
-        # Inicializa a instância de conexão no construtor
-        self.mongo = MongoQueries()
+        pass
 
-    def get_relatorio_hospede(self):
-        # Abre a conexão
-        self.mongo.connect()
-
-        # Realiza a consulta na coleção 'hospede'
-        query_result = self.mongo.db["hospede"].find({}, 
+    def get_relatorio_hospedes(self):
+        mongo = MongoDBConnection() 
+        mongo.connect()
+        
+        query_result = mongo.db["hospede"].find({},
                                                  {"id_hospede": 1, 
                                                   "nome": 1, 
                                                   "sobrenome": 1,
@@ -197,4 +195,5 @@ class Relatorio:
         df_total = pd.DataFrame(list(query_result))
         self.mongo.close()
         print(df_total)
+
         input("Pressione Enter para Sair do Relatório de Total Gasto por Hóspede")
