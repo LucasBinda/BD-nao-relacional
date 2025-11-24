@@ -1,50 +1,41 @@
+from model.Hospede import Hospede
+from conexion.mongodb_queries import MongoDBConnection
 import pandas as pd
-from model.hospede import hospede
-from conexion.mongo_queries import MongoQueries
 
 class Controller_Hospede:
     def __init__(self):
-        self.mongo = MongoQueries()
+        self.mongo = MongoDBConnection()
 
     def inserir_hospede(self) -> Hospede:
-        # Cria uma nova conexão com o banco que permite alteração
         self.mongo.connect()
-
-        # Solicita ao usuario o novo Documento/CPF
+        
+        print("\n--- INSERÇÃO DE NOVO HÓSPEDE ---")
         documento = input("Documento/CPF (Novo): ")
 
-        if self.verifica_existencia_hospede(documento):
-            # Solicita ao usuario o novo nome
-            nome = input("Nome (Novo): ")
-            sobrenome = input("Sobrenome (Novo): ")
-            email = input("Email (Novo): ")
-            telefone = input("Telefone (Novo): ")
+        if not self.verifica_existencia_hospede(documento):
+            
+            nome = input("Nome: ")
+            sobrenome = input("Sobrenome: ")
+            email = input("Email: ")
+            telefone = input("Telefone: ")
+            
+            # Gera o próximo ID (Simulando Sequence)
+            proximo_id = self.recupera_proximo_id()
 
-            # Insere e persiste o novo hóspede
-            self.mongo.db["hospedes"].insert_one({
+            hospede_doc = {
+                "id_hospede": proximo_id,
                 "documento": documento,
                 "nome": nome,
                 "sobrenome": sobrenome,
                 "email": email,
                 "telefone": telefone
-            })
+            }
 
-            # Recupera os dados do novo hóspede criado transformando em um DataFrame
-            df_hospede = self.recupera_hospede(documento)
-
-            # Cria um novo objeto Hospede
-            novo_hospede = Hospede(
-                df_hospede.documento.values[0],
-                df_hospede.nome.values[0],
-                df_hospede.sobrenome.values[0],
-                df_hospede.email.values[0],
-                df_hospede.telefone.values[0]
-            )
-
-            # Exibe os atributos do novo hóspede
-            print(novo_hospede.to_string())
+            self.mongo.db["hospede"].insert_one(hospede_doc)
             self.mongo.close()
-            # Retorna o objeto novo_hospede para utilização posterior, caso necessário
+
+            novo_hospede = Hospede(proximo_id, documento, nome, sobrenome, email, telefone)
+            print(novo_hospede.to_string())
             return novo_hospede
         else:
             self.mongo.close()
@@ -52,23 +43,18 @@ class Controller_Hospede:
             return None
 
     def atualizar_hospede(self) -> Hospede:
-        # Cria uma nova conexão com o banco que permite alteração
         self.mongo.connect()
-
-        # Solicita ao usuário o código do hóspede a ser alterado
         documento = input("Documento/CPF do hóspede que deseja alterar: ")
 
-        # Verifica se o hóspede existe na base de dados
-        if not self.verifica_existencia_hospede(documento):
-            # Solicita a nova descrição do hóspede
+        if self.verifica_existencia_hospede(documento):
+            
             novo_nome = input("Nome (Novo): ")
             novo_sobrenome = input("Sobrenome (Novo): ")
             novo_email = input("Email (Novo): ")
             novo_telefone = input("Telefone (Novo): ")
 
-            # Atualiza o hóspede existente
-            self.mongo.db["hospedes"].update_one(
-                {"documento": f"{documento}"},
+            self.mongo.db["hospede"].update_one(
+                {"documento": documento},
                 {"$set": {
                     "nome": novo_nome,
                     "sobrenome": novo_sobrenome,
@@ -76,23 +62,20 @@ class Controller_Hospede:
                     "telefone": novo_telefone
                 }}
             )
-
-            # Recupera os dados do novo hóspede criado transformando em um DataFrame
-            df_hospede = self.recupera_hospede(documento)
-
-            # Cria um novo objeto hospede
-            hospede_atualizado = Hospede(
-                df_hospede.documento.values[0],
-                df_hospede.nome.values[0],
-                df_hospede.sobrenome.values[0],
-                df_hospede.email.values[0],
-                df_hospede.telefone.values[0]
-            )
-
-            # Exibe os atributos do novo hóspede
-            print(hospede_atualizado.to_string())
+            
+            # Recupera o ID para retornar o objeto completo
+            hospede_atual = self.mongo.db["hospede"].find_one({"documento": documento})
             self.mongo.close()
-            # Retorna o objeto hospede_atualizado para utilização posterior, caso necessário
+
+            hospede_atualizado = Hospede(
+                hospede_atual["id_hospede"], 
+                documento, 
+                novo_nome, 
+                novo_sobrenome, 
+                novo_email, 
+                novo_telefone
+            )
+            print(hospede_atualizado.to_string())
             return hospede_atualizado
         else:
             self.mongo.close()
@@ -100,71 +83,39 @@ class Controller_Hospede:
             return None
 
     def excluir_hospede(self):
-        # Cria uma nova conexão com o banco que permite alteração
         self.mongo.connect()
-
-        # Solicita ao usuário o Documento/CPF do Hóspede a ser alterado
         documento = input("Documento/CPF do Hóspede que irá excluir: ")
 
-        # Verifica se o hóspede existe na base de dados
-        if not self.verifica_existencia_hospede(documento):
-            # Recupera os dados do novo hóspede criado transformando em um DataFrame
-            df_hospede = self.recupera_hospede(documento)
-
-            # Revome o hóspede da tabela
-            self.mongo.db["hospedes"].delete_one({"documento":f"{documento}"})
-
-            # Cria um novo objeto Hospede para informar que foi removido
-            hospede_excluido = Hospede(
-                df_hospede.documento.values[0],
-                df_hospede.nome.values[0],
-                df_hospede.sobrenome.values[0],
-                df_hospede.email.values[0],
-                df_hospede.telefone.values[0]
-            )
-
+        if self.verifica_existencia_hospede(documento):
+            
+            # Recupera dados antes de excluir para exibir
+            hospede_rec = self.mongo.db["hospede"].find_one({"documento": documento})
+            
+            self.mongo.db["hospede"].delete_one({"documento": documento})
             self.mongo.close()
-            # Exibe os atributos do hóspede excluído
+
+            hospede_excluido = Hospede(
+                hospede_rec["id_hospede"], 
+                hospede_rec["documento"], 
+                hospede_rec["nome"], 
+                hospede_rec["sobrenome"], 
+                hospede_rec["email"], 
+                hospede_rec["telefone"]
+            )
             print("Hóspede Removido com Sucesso!")
             print(hospede_excluido.to_string())
         else:
             self.mongo.close()
             print(f"O Documento/CPF {documento} não existe.")
 
-    def verifica_existencia_hospede(self, documento:str=None, external:bool=False) -> bool:
-        if external:
-            # Cria uma nova conexão com o banco que permite alteração
-            self.mongo.connect()
+    def verifica_existencia_hospede(self, documento:str=None) -> bool:
+        # Método auxiliar para verificar se o documento existe
+        resultado = self.mongo.db["hospede"].find_one({"documento": documento})
+        return resultado is not None
 
-        # Recupera os dados do novo hóspede criado transformando em um DataFrame
-        df_hospede = pd.DataFrame(
-            self.mongo.db["hospedes"].find(
-                {"documento":f"{documento}"},
-                {"documento": 1, "_id": 0}
-            )
-        )
-
-        if external:
-            # Fecha a conexão com o Mongo
-            self.mongo.close()
-
-        return df_hospede.empty
-
-    def recupera_hospede(self, documento:str=None, external:bool=False) -> pd.DataFrame:
-        if external:
-            # Cria uma nova conexão com o banco que permite alteração
-            self.mongo.connect()
-
-        # Recupera os dados do novo hóspede criado transformando em um DataFrame
-        df_hospede = pd.DataFrame(
-            list(self.mongo.db["hospedes"].find(
-                {"documento":f"{documento}"},
-                {"_id": 0}
-            ))
-        )
-
-        if external:
-            # Fecha a conexão com o Mongo
-            self.mongo.close()
-
-        return df_hospede
+    def recupera_proximo_id(self) -> int:
+        # Método auxiliar para gerar ID sequencial
+        ultimo = self.mongo.db["hospede"].find_one(sort=[("id_hospede", -1)])
+        if ultimo:
+            return ultimo["id_hospede"] + 1
+        return 1
