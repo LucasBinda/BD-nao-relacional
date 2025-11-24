@@ -1,10 +1,9 @@
 from conexion.mongodb_queries import MongoDBConnection
 
 class SplashScreen:
-
     def __init__(self):
         self.created_by = """
-        #        ANNA LUIZA
+       #        ANNA LUIZA
         #        LAISA
         #        LUCAS
         #        MIKAELLY
