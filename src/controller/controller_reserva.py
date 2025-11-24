@@ -1,210 +1,127 @@
-import pandas as pd
-from model.reserva import reserva
-from conexion.mongo_queries import MongoQueries
+from model.Reserva import Reserva
+from model.Hospede import Hospede
+from model.Quarto import Quarto
+from conexion.mongodb_queries import MongoDBConnection
+import decimal
 from datetime import datetime
 
 class Controller_Reserva:
     def __init__(self):
-        self.mongo = MongoQueries()
+        self.mongo = MongoDBConnection()
+    
+    def verifica_existencia_hospede_quarto(self, cpf_hospede: str, numero_quarto: str):
+        # Busca Hóspede por CPF
+        hospede = self.mongo.db["hospede"].find_one({"documento": cpf_hospede})
+        if not hospede:
+            print(f"ERRO: Hóspede com CPF {cpf_hospede} não encontrado.")
+            return None, None
+
+        # Busca Quarto por Número
+        quarto = self.mongo.db["quarto"].find_one({"numero_quarto": numero_quarto})
+        if not quarto:
+            print(f"ERRO: Quarto com número {numero_quarto} não encontrado.")
+            return None, None
+
+        return hospede, quarto # Retorna os objetos completos (dicionários)
 
     def inserir_reserva(self) -> Reserva:
-        # Cria uma nova conexão com o banco que permite alteração
         self.mongo.connect()
+        
+        print("\n--- INSERÇÃO DE NOVA RESERVA ---")
+        cpf_hospede = input("CPF do Hóspede: ")
+        numero_quarto = input("Número do Quarto: ")
+        
+        # Validação de FKs (Hospede e Quarto)
+        hospede_dict, quarto_dict = self.verifica_existencia_hospede_quarto(cpf_hospede, numero_quarto)
+        
+        if hospede_dict is None or quarto_dict is None:
+             self.mongo.close()
+             return None
 
-        # Solicita ao usuario o novo ID da Reserva (gerado manualmente)
-        id_reserva = input("ID da Reserva (Novo): ")
+        data_checkin = input("Data de Check-in (AAAA-MM-DD): ")
+        data_checkout = input("Data de Check-out (AAAA-MM-DD): ")
+        valor_total = float(input("Valor Total: "))
+        quant_hospedes = int(input("Quantidade de Hóspedes: "))
+        status = input("Status da Reserva (EX: CONFIRMADA): ")
 
-        if self.verifica_existencia_reserva(id_reserva):
-            # Solicita ao usuario os dados necessários da reserva
-            id_hospede = input("ID do Hóspede: ")
-            id_quarto = input("ID do Quarto: ")
-            data_checkin = input("Data Check-in (AAAA-MM-DD): ")
-            data_checkout = input("Data Check-out (AAAA-MM-DD): ")
-            quant_hospedes = input("Quantidade de Hóspedes: ")
-            status = input("Status da Reserva: ")
-            valor_total = input("Valor Total: ")
-            data_reserva = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        proximo_id = self.recupera_proximo_id()
+        
+        # Cria o documento
+        data = dict(
+            id_reserva=proximo_id,
+            id_hospede=hospede_dict["id_hospede"],
+            id_quarto=quarto_dict["id_quarto"],
+            data_checkin=data_checkin, # Pode converter para datetime se quiser
+            data_checkout=data_checkout,
+            quant_hospedes=quant_hospedes,
+            status=status,
+            valor_total=valor_total,
+            data_reserva=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        )
 
-            # Insere e persiste a nova reserva
-            self.mongo.db["reserva"].insert_one({
-                "id_reserva": id_reserva,
-                "id_hospede": id_hospede,
-                "id_quarto": id_quarto,
-                "data_checkin": data_checkin,
-                "data_checkout": data_checkout,
-                "quant_hospedes": quant_hospedes,
-                "status": status,
-                "valor_total": valor_total,
-                "data_reserva": data_reserva
-            })
+        self.mongo.db["reserva"].insert_one(data)
+        self.mongo.close()
 
-            # Recupera os dados da nova reserva criada transformando em um DataFrame
-            df_reserva = self.recupera_reserva(id_reserva)
+        # Cria objetos para compor a Reserva (POO)
+        obj_hospede = Hospede(hospede_dict["id_hospede"], hospede_dict["documento"], hospede_dict["nome"], hospede_dict["sobrenome"])
+        obj_quarto = Quarto(quarto_dict["id_quarto"], quarto_dict["numero_quarto"])
 
-            # Cria um novo objeto reserva
-            nova_reserva = Reserva(
-                df_reserva.id_reserva.values[0],
-                df_reserva.id_hospede.values[0],
-                df_reserva.id_quarto.values[0],
-                df_reserva.data_checkin.values[0],
-                df_reserva.data_checkout.values[0],
-                df_reserva.data_reserva.values[0],
-                df_reserva.valor_total.values[0],
-                df_reserva.quant_hospedes.values[0],
-                df_reserva.status.values[0]
-            )
-
-            # Exibe os atributos da nova reserva
-            print(nova_reserva.to_string())
-            self.mongo.close()
-
-            # Retorna o objeto nova_reserva para utilização posterior, caso necessário
-            return nova_reserva
-
-        else:
-            self.mongo.close()
-            print(f"O ID da Reserva {id_reserva} já está cadastrado.")
-            return None
+        nova_reserva = Reserva(
+            proximo_id,
+            obj_hospede,
+            obj_quarto,
+            data_checkin,
+            data_checkout,
+            data['data_reserva'],
+            decimal.Decimal(valor_total),
+            quant_hospedes,
+            status
+        )
+        
+        print(nova_reserva.to_string())
+        return nova_reserva
 
     def atualizar_reserva(self) -> Reserva:
-        # Cria uma nova conexão com o banco que permite alteração
         self.mongo.connect()
+        id_reserva = int(input("Código da Reserva que irá alterar: "))
 
-        # Solicita ao usuário o código da reserva a ser alterada
-        id_reserva = input("ID da Reserva que deseja atualizar: ")
+        if self.verifica_existencia_reserva(id_reserva):
+            novo_valor = float(input("Novo Valor Total: "))
 
-        # Verifica se a reserva existe na base de dados
-        if not self.verifica_existencia_reserva(id_reserva):
-            # Solicita ao usuario o novo valor total
-            novo_valor_total = input("Novo Valor Total: ")
-
-            # Atualiza o valor total da reserva existente
             self.mongo.db["reserva"].update_one(
-                {"id_reserva": f"{id_reserva}"},
-                {"$set": {"valor_total": novo_valor_total}}
+                {"id_reserva": id_reserva},
+                {"$set": {"valor_total": novo_valor}}
             )
-
-            # Recupera os dados da reserva atualizada transformando em um DataFrame
-            df_reserva = self.recupera_reserva(id_reserva)
-
-            # Cria um novo objeto reserva
-            reserva_atualizada = Reserva(
-                df_reserva.id_reserva.values[0],
-                df_reserva.id_hospede.values[0],
-                df_reserva.id_quarto.values[0],
-                df_reserva.data_checkin.values[0],
-                df_reserva.data_checkout.values[0],
-                df_reserva.data_reserva.values[0],
-                df_reserva.valor_total.values[0],
-                df_reserva.quant_hospedes.values[0],
-                df_reserva.status.values[0]
-            )
-
-            # Exibe os atributos da reserva atualizada
-            print(reserva_atualizada.to_string())
+            
+            reserva_dict = self.mongo.db["reserva"].find_one({"id_reserva": id_reserva})
             self.mongo.close()
-
-            # Retorna o objeto reserva_atualizada para utilização posterior, caso necessário
-            return reserva_atualizada
+            
+            # Para reconstruir o objeto completo, precisaria buscar hospede/quarto novamente
+            # Simplificando para retorno básico com IDs
+            print(f"Reserva {id_reserva} atualizada com sucesso para valor: {novo_valor}")
+            return None 
         else:
             self.mongo.close()
-            print(f"O ID da Reserva {id_reserva} não existe.")
+            print(f"O código {id_reserva} não existe.")
             return None
 
     def excluir_reserva(self):
-        # Cria uma nova conexão com o banco que permite alteração
         self.mongo.connect()
+        id_reserva = int(input("Código da Reserva que irá excluir: "))
 
-        # Solicita ao usuário o ID da reserva a ser alterada
-        id_reserva = input("ID da Reserva que irá excluir: ")
-
-        # Verifica se a reserva existe na base de dados
-        if not self.verifica_existencia_reserva(id_reserva):
-            # Recupera os dados da reserva transformando em um DataFrame
-            df_reserva = self.recupera_reserva(id_reserva)
-
-            # Remove a reserva da tabela
-            self.mongo.db["reserva"].delete_one({"id_reserva": f"{id_reserva}"})
-
-            # Cria um novo objeto reserva para informar que foi removida
-            reserva_excluida = Reserva(
-                df_reserva.id_reserva.values[0],
-                df_reserva.id_hospede.values[0],
-                df_reserva.id_quarto.values[0],
-                df_reserva.data_checkin.values[0],
-                df_reserva.data_checkout.values[0],
-                df_reserva.data_reserva.values[0],
-                df_reserva.valor_total.values[0],
-                df_reserva.quant_hospedes.values[0],
-                df_reserva.status.values[0]
-            )
-
+        if self.verifica_existencia_reserva(id_reserva):
+            self.mongo.db["reserva"].delete_one({"id_reserva": id_reserva})
             self.mongo.close()
-            # Exibe os atributos da reserva excluída
             print("Reserva Removida com Sucesso!")
-            print(reserva_excluida.to_string())
         else:
             self.mongo.close()
-            print(f"O ID da Reserva {id_reserva} não existe.")
+            print(f"O código {id_reserva} não existe.")
 
-    def verifica_existencia_reserva(self, id_reserva:str=None, external:bool=False) -> bool:
-        if external:
-            # Cria uma nova conexão com o banco que permite alteração
-            self.mongo.connect()
+    def verifica_existencia_reserva(self, id_reserva:int=None) -> bool:
+        return self.mongo.db["reserva"].find_one({"id_reserva": id_reserva}) is not None
 
-        # Recupera os dados da reserva transformando em um DataFrame
-        df_reserva = pd.DataFrame(
-            self.mongo.db["reserva"].find(
-                {"id_reserva": f"{id_reserva}"},
-                {
-                    "id_reserva": 1,
-                    "id_hospede": 1,
-                    "id_quarto": 1,
-                    "data_checkin": 1,
-                    "data_checkout": 1,
-                    "quant_hospedes": 1,
-                    "status": 1,
-                    "valor_total": 1,
-                    "data_reserva": 1,
-                    "_id": 0
-                }
-            )
-        )
-
-        if external:
-            # Fecha a conexão com o Mongo
-            self.mongo.close()
-
-        return df_reserva.empty
-
-    def recupera_reserva(self, id_reserva:str=None, external:bool=False) -> pd.DataFrame:
-        if external:
-            # Cria uma nova conexão com o banco que permite alteração
-            self.mongo.connect()
-
-        # Recupera os dados da reserva transformando em um DataFrame
-        df_reserva = pd.DataFrame(
-            list(
-                self.mongo.db["reserva"].find(
-                    {"id_reserva": f"{id_reserva}"},
-                    {
-                        "id_reserva": 1,
-                        "id_hospede": 1,
-                        "id_quarto": 1,
-                        "data_checkin": 1,
-                        "data_checkout": 1,
-                        "quant_hospedes": 1,
-                        "status": 1,
-                        "valor_total": 1,
-                        "data_reserva": 1,
-                        "_id": 0
-                    }
-                )
-            )
-        )
-
-        if external:
-            # Fecha a conexão com o Mongo
-            self.mongo.close()
-
-        return df_reserva
+    def recupera_proximo_id(self) -> int:
+        ultimo = self.mongo.db["reserva"].find_one(sort=[("id_reserva", -1)])
+        if ultimo:
+            return ultimo["id_reserva"] + 1
+        return 1
