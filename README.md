@@ -1,107 +1,124 @@
-# 🏨 Sistema de Gestão de Reservas Hoteleiras
+````markdown
+# 🏨 Sistema de Gestão de Reservas Hoteleiras (NoSQL)
 
-Este projeto implementa um sistema básico de gestão de reservas hoteleiras, modelado em classes Python para interagir com um Banco de Dados Oracle (Oracle XE/XEPDB1).
+Este projeto consiste em um sistema de gerenciamento de reservas hoteleiras desenvolvido em **Python**, utilizando o banco de dados não relacional **MongoDB** para a persistência de todos os dados.
 
-## 🚀 Como Executar o Projeto no Linux
+O sistema foi migrado de uma arquitetura relacional para NoSQL e segue o padrão **MVC (Model-View-Controller)**.
 
-Siga os passos abaixo para configurar o ambiente, o banco de dados e rodar o sistema.
+---
 
-### Pré-requisitos
+## 🚀 Funcionalidades
 
-1.  **Python 3.8+** (Recomendado usar Python 3.10 ou superior).
-2.  **Oracle Database** (Oracle XE, XEPDB1 ou similar) instalado e rodando localmente (endereço `localhost:1521`).
-3.  **Variáveis de Ambiente Oracle** (Opcional, mas recomendado para o driver `oracledb`).
+O sistema oferece um menu interativo via terminal para gerenciamento completo das seguintes entidades:
 
-### Passo 1: Clone o Repositório
+* **Hóspedes:** Cadastro, atualização e remoção de clientes.
+* **Tipos de Quarto:** Gerenciamento das categorias e preços.
+* **Quartos:** Controle dos quartos físicos e seus status.
+* **Reservas:** Criação de novas reservas com validação de disponibilidade.
+* **Pagamentos:** Registro de pagamentos associados às reservas.
 
-Abra o terminal e clone seu projeto:
+Além das operações de CRUD (Create, Read, Update, Delete), o sistema gera **Relatórios Gerenciais** detalhados.
 
-```bash
-git clone https://www.youtube.com/watch?v=351MZvGXpnY
-cd trabalho_c2
-```
+---
 
-### Passo 2: Configuração do Ambiente Python
+## 🛠️ Tecnologias Utilizadas
 
-Crie e ative um ambiente virtual para isolar as dependências do projeto.
+* **Linguagem:** Python 3.10+
+* **Banco de Dados:** MongoDB
+* **Driver:** PyMongo
+* **Manipulação de Dados:** Pandas
+* **Ambiente de Desenvolvimento:** VS Code / GitHub Codespaces
 
-```bash
-# 1. Cria o ambiente virtual
-python3 -m venv .venv
+---
 
-# 2. Ativa o ambiente virtual
-source .venv/bin/activate 
+## 📦 Estrutura do Projeto
 
-# 3. Instala as dependências listadas no requirements.txt
-pip install -r requirements.txt
-```
-
-### Passo 3: Configuração das Credenciais do Oracle
-
-O sistema lê as credenciais de acesso ao banco de dados Oracle a partir de um arquivo específico para segurança.
-
-1.  Crie a pasta de autenticação:
-
-    ```bash
-    mkdir -p src/conexion/passphrase
-    ```
-
-2.  Crie o arquivo de autenticação `authentication.oracle` dentro da pasta `src/conexion/passphrase/`:
-
-    ```bash
-    touch src/conexion/passphrase/authentication.oracle
-    ```
-
-3.  Edite o arquivo `authentication.oracle` e insira o seu nome de usuário e senha, separados por uma vírgula **e um espaço**, sem quebra de linha.
-
-    **Exemplo do conteúdo de `authentication.oracle`:**
-
-    ```
-    NOME_USUARIO, SENHA_DO_USUARIO
-    ```
-
-    *(**ATENÇÃO:** O usuário e a senha devem ser os mesmos configurados para o seu banco de dados Oracle, ex: `SYSTEM, oracle`)*
-
-### Passo 4: Inicialização do Banco de Dados
-
-Antes de rodar o menu principal, você deve criar as tabelas e popular o banco com dados de amostra. Para isso, execute o *script* dedicado:
-
-```bash
-python3 src/create_tables_and_records.py 
-```
-
-Este script irá:
-
-1.  Conectar ao Oracle.
-2.  Executar todos os comandos DDL (`CREATE TABLE`) a partir dos arquivos SQL.
-3.  Inserir os registros de amostra.
-
-**Confirmação:** Se o processo for bem-sucedido, você verá as mensagens de *Successfully executed* no terminal.
-
-### Passo 5: Execução do Sistema
-
-Com o banco de dados configurado e populado, você pode iniciar o sistema principal:
-
-```bash
-python3 src/principal.py
-```
-
-O sistema irá carregar o menu de opções.
+```text
+/
+├── src/
+│   ├── conexion/           # Conexão com o MongoDB
+│   │   ├── config/         # Arquivo de configuração (config.json)
+│   │   └── mongodb_queries.py
+│   ├── controller/         # Controladores (Lógica de Negócio)
+│   │   ├── controller_hospede.py
+│   │   ├── controller_reserva.py
+│   │   └── ...
+│   ├── model/              # Classes de Modelo (POO)
+│   │   ├── Hospede.py
+│   │   ├── Reserva.py
+│   │   └── ...
+│   ├── reports/            # Relatórios Gerenciais
+│   │   └── relatorios.py
+│   ├── utils/              # Utilitários (Menus, Splash Screen)
+│   ├── principal.py        # Arquivo Principal (Main)
+│   └── seed_mongo.py       # Script de População do Banco
+├── requirements.txt        # Dependências do Python
+└── README.md               # Documentação
+````
 
 -----
 
-## 🛠️ Estrutura do Projeto
+## 🔧 Como Executar o Projeto
 
-O projeto segue a arquitetura Model-View-Controller (MVC) ou similar para organização de responsabilidades:
+### 1\. Pré-requisitos
+
+Certifique-se de ter o **Python** e o **MongoDB** instalados.
+
+  * **Se estiver usando Docker (Recomendado):**
+    ```bash
+    docker run -d -p 27017:27017 --name mongodb mongo:latest
+    ```
+
+### 2\. Configuração do Ambiente
+
+Clone o repositório e instale as dependências:
+
+```bash
+# Clone o projeto
+git clone [https://github.com/seu-usuario/seu-repositorio.git](https://github.com/seu-usuario/seu-repositorio.git)
+cd banco-de-dados
+
+# Crie e ative o ambiente virtual (Opcional, mas recomendado)
+python -m venv .venv
+source .venv/bin/activate  # Linux/Mac
+# .venv\Scripts\activate   # Windows
+
+# Instale as bibliotecas
+pip install -r src/requeriments.txt
+```
+
+### 3\. Configuração do Banco de Dados
+
+O sistema precisa de um arquivo de configuração para conectar ao MongoDB.
+
+1.  Execute o script de população (`seed_mongo.py`) pela primeira vez. Ele criará automaticamente o arquivo `src/conexion/config/config.json`.
+2.  Se necessário, edite o arquivo `config.json` com suas credenciais (para conexão local sem senha, deixe os campos vazios).
+
+### 4\. Inicialização (Seed)
+
+Para criar as coleções e inserir dados de teste, execute:
+
+```bash
+python src/seed_mongo.py
+```
+
+*Isso limpará o banco atual e inserirá registros de exemplo para Hóspedes, Quartos e Reservas.*
+
+### 5\. Execução
+
+Inicie o sistema principal:
+
+```bash
+python src/principal.py
+```
+
+-----
+
+## 👥 Autores
+
+  * **Anna Luiza, Laisa Camilo, Lucas Binda, Mikaelly Cardoso, Victória Teixeira**
+
+<!-- end list -->
 
 ```
-BD-nao-relacional/
-├── sql/                        # Contém scripts SQL para relatórios e setup.
-├── src/
-│   ├── conexion/               # Lógica de conexão com o Oracle (OracleQueries).
-│   ├── controller/             # Lógica de negócio (regras e manipulação de dados).
-│   ├── model/                  # Classes de Entidades (Hospede, Quarto, Reserva, etc.).
-│   ├── reports/                # Lógica para geração e exibição de relatórios.
-│   └── utils/                  # Classes utilitárias (Ex: splash screen, manipulação de paths).
-└── README.md
 ```

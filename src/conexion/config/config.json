@@ -1,0 +1,10 @@
+{
+    "database": {
+        "username": "",
+        "password": "",
+        "host": "localhost",
+        "port": 27017,
+        "authSource": "admin",
+        "db_name": "HOTEL_DB"
+    }
+}

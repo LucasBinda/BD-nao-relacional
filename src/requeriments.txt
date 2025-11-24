@@ -1,11 +1,8 @@
-<<<<<<< HEAD
 oracledb
 pandas
 numpy
 path
-=======
 cx-Oracle
 pandas
 numpy
->>>>>>> 46959090dcec3d6051d2b81e5cd2648b90b6c12b
 pymongo
